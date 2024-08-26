@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 
 # Load your pre-trained model (assuming it's saved as 'model.h5')
-model = tf.keras.models.load_model('model.h5')
+model = tf.keras.models.load_model('deep_learning_model.h5')
 
 # Create a simple UI
 st.title("Mandate Prediction App")
