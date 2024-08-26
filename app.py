@@ -1,36 +1,60 @@
 
 import streamlit as st
-import numpy as np
-import tensorflow as tf
-from sklearn.preprocessing import StandardScaler
 import pandas as pd
+import tensorflow as tf
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
 
-# Load your pre-trained model (assuming it's saved as 'model.h5')
+# Load the trained model
 model = tf.keras.models.load_model('deep_learning_model.h5')
 
-# Create a simple UI
-st.title("Mandate Prediction App")
-st.write("This app predicts the number of mandates based on input data.")
+# Define preprocessing steps
+numeric_features = ['numParishes', 'blankVotes', 'nullVotes', 'votersPercentage', 'Percentage']
+categorical_features = ['Party']
 
-# Input fields for user to enter data
-time = st.text_input("Time")
-total_mandates = st.number_input("Total Mandates")
-num_parishes = st.number_input("Number of Parishes")
-blank_votes = st.number_input("Blank Votes")
-null_votes = st.number_input("Null Votes")
-voters_percentage = st.number_input("Voters Percentage")
-party = st.text_input("Party")
-percentage = st.number_input("Percentage")
+# Create ColumnTransformer for preprocessing
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', SimpleImputer(strategy='mean'), numeric_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ])
+
+# Define feature names for OneHotEncoder
+onehot_feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
+feature_names = numeric_features + list(onehot_feature_names)
+
+# Streamlit UI
+st.title("Election Mandates Prediction")
+
+st.write("Enter the details below to predict the total mandates:")
+
+# Input fields
+numParishes = st.number_input('Number of Parishes', min_value=0)
+blankVotes = st.number_input('Blank Votes', min_value=0)
+nullVotes = st.number_input('Null Votes', min_value=0)
+votersPercentage = st.number_input('Voters Percentage', min_value=0.0, max_value=100.0)
+Party = st.selectbox('Party', options=['Party1', 'Party2', 'Party3'])  # Adjust this list based on actual categories
+Percentage = st.number_input('Percentage', min_value=0.0, max_value=100.0)
 
 # Predict button
-if st.button("Predict"):
-    # Preprocess the input data
-    input_data = np.array([[total_mandates, num_parishes, blank_votes, null_votes, voters_percentage, percentage]])
-    scaler = StandardScaler()
-    input_data_scaled = scaler.fit_transform(input_data)
-
-    # Predict using the model
-    prediction = model.predict(input_data_scaled)
+if st.button('Predict'):
+    # Create a DataFrame for preprocessing
+    input_df = pd.DataFrame([{
+        'numParishes': numParishes,
+        'blankVotes': blankVotes,
+        'nullVotes': nullVotes,
+        'votersPercentage': votersPercentage,
+        'Party': Party,
+        'Percentage': Percentage
+    }])
     
-    # Display the prediction
-    st.write(f"Predicted Mandates: {prediction[0][0]}")
+    # Preprocess input data
+    input_data = preprocessor.transform(input_df)
+    
+    # Make prediction
+    prediction = model.predict(input_data)
+    
+    # Display prediction
+    st.write(f"Predicted Total Mandates: {prediction[0][0]:.2f}")
+
